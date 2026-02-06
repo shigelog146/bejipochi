@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <!--head head head head head head head head head head head head head head head　はじまり-->
+<head>
+<meta charset="UTF-8">
+<title>野菜登録（農家用）</title>
+<style>
+  /* 高齢者・スマホ向けに大きめ表示 */
+  body {
+    font-size: 20px;
+    font-family: sans-serif;
+    padding: 16px;
+    background-color: #e4e3e3;
+  }
+
+  h1 {
+    font-size: 26px;
+    margin-bottom: 20px;
+  }
+
+  label {
+    display: block;
+    margin-top: 16px;
+    font-weight: bold;
+  }
+
+  input, textarea {
+    width: 100%;
+    font-size: 20px;
+    padding: 10px;
+    margin-top: 6px;
+  }
+
+  /* ボタン：最大横 5cm、左寄せ */
+  button {
+    width: auto;              /* 自動幅 */
+    max-width: 5cm;           /* 最大 5cm */
+    font-size: 20px;
+    padding: 10px;
+    margin: 24px 0;           /* 左寄せ（auto を使わない） */
+    background: rgb(26, 87, 26);
+    color: white;
+    border: none;
+    border-radius: 3px;
+
+    /* 立体感 */
+    /*box-shadow: 0 4px 0 #225d0b;
+    transition: all 0.1s ease;*/
+  }
+
+  /* 押している間 */
+  button:active {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 #0b5d0b;
+  }
+  /* ホバー　*/
+  button:hover { background-color: #488e48;
+  }
+
+  .file-label {
+    display: inline-block;
+    background: #0b5d0b;
+    color: white;
+    padding: 12px 16px;
+    border-radius: 2px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+
+  /* input本体は隠す */
+  .file-label input {
+    display: none;
+  }
+
+  #photoPreview {
+    margin-top: 16px;
+    width: 100%;
+    max-width: 320px;
+    height: 240px;
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fafafa;
+  }
+
+  #photoPreview img {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 6px;
+  }
+
+  /* 横並び */
+  .coord-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .coord-item {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 150px;
+  }
+
+  .coord-item label {
+    margin-bottom: 4px;
+  }
+
+  .coord-item input {
+    padding: 6px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  #loginPanel {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: white;
+  padding: 10px;
+  border-radius: 3px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.2);
+  z-index: 1000;
+  width: 270px;
+}
+
+#loginPanel input {
+  width: 100%;
+  margin-bottom: 5px;
+}
+
+.hidden {
+  display: none;
+}
+
+.locked {
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+#loginPanel,
+#loginPanel * {
+  box-sizing: border-box;
+}
+
+#loginPanel input {
+  width: 100%;
+  margin-bottom: 8px;
+  font-size: 16px;
+}
+
+/* =========================
+   画面が小さい端末向け調整
+   ========================= */
+@media (max-width: 600px) {
+
+  /* 入力フォーム全体 */
+  #appArea {
+    padding: 8px;
+  }
+
+  /* ラベル文字を少し小さく */
+  label {
+    font-size: 14px;
+  }
+
+  /* 入力欄・テキストエリア */
+  input,
+  textarea {
+    font-size: 14px;
+    padding: 6px;
+  }
+
+  /* 写真プレビュー */
+  #photoPreview img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* 登録ボタン */
+  button {
+    font-size: 14px;
+    padding: 8px;
+  }
+}
+
+#map{
+  width: 100%;
+  max-width: 320px;
+  height: 240px;
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  margin-top: 16px;
+}
+
+</style>
+
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<!--地図リンク-->
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!--地図リンク-->
+
+</head>
+  <!--head head head head head head head head head head head head head head head　おわり　-->
+  <!--body body body body body body body body body body body body body body body　はじまり--> 
+<body>
+<!-- 🔐 ログインパネル -->
+<div id="loginPanel">
+  <input id="email" type="email" placeholder="メール">
+  <input id="password" type="password" placeholder="パスワード">
+
+  <button onclick="login()">ログイン</button>
+  <button onclick="signup()">登録</button>
+  <button onclick="logout()" class="hidden">ログアウト</button>
+
+  <span id="loginStatus"></span>
+</div>
+<!-- ★ 既存フォームを全部ここに入れる はじまり-->
+<div id="appArea" class="locked">
+
+  <!-- ↓↓↓ ここに今までの野菜登録HTMLをそのまま ↓↓↓ -->
+  <!--（farm_name / 緯度経度 / 写真 / 登録ボタン etc）-->
+  <!-- ↑↑↑ 変更なし ↑↑↑ -->
+
+<h1>本日の野菜を登録</h1>
+
+<label>畑の名前</label>
+<input id="farm_name" placeholder="例：山田農園 第1畑">
+
+<label>畑の位置</label>
+<button type="button" onclick="getCurrentLocation()">
+  <i data-lucide="carrot"></i> 今いる場所
+</button>
+
+<script>
+  // DOMが読み込まれてから実行する
+  window.addEventListener('DOMContentLoaded', () => {
+    lucide.createIcons();
+  });
+
+  // 位置取得の関数（中身は空でも定義しておく必要があります）
+  function getCurrentLocation() {
+    console.log("位置情報を取得中...");
+  }
+</script>
+
+  <!-- 緯度・経度の入力欄（横並び） -->
+  <div class="coord-row">
+    <div class="coord-item">
+      <label>緯度</label>
+      <input id="lat" readonly>
+    </div>
+
+    <div class="coord-item">
+      <label>経度</label>
+      <input id="lng" readonly>
+    </div>
+  </div>
+
+<div id="map"></div>
+
+<!-- 野菜名 -->
+<label>野菜の名前</label>
+<input id="vegetable_name" placeholder="例：ほうれん草">
+
+<!-- 単位 -->
+<label>販売単位</label>
+<input id="unit" placeholder="例：1束 / 1袋 / 1本">
+
+<!-- 価格 -->
+<label>価格（円）</label>
+<input id="price" type="number" placeholder="例：200">
+
+<!-- コメント -->
+<label>コメント（任意）</label>
+<textarea id="comment" placeholder="例：今朝採れた新鮮な野菜です"></textarea>
+
+<!-- 写真選択 -->
+<label class="file-label">
+  写真を撮る／選ぶ
+  <input type="file"
+         accept="image/*"
+         capture="environment"
+         id="photoInput">
+</label>
+
+<!-- 写真表示エリア -->
+<div id="photoPreview">
+  <p>ここに写真が表示されます</p>
+</div>
+</div>
+<!-- ★ 既存フォームを全部ここに入れる　おわり -->
+  <!--script script script script script script script script script script script script　はじまり--> 
+<script>
+document.getElementById("photoInput").addEventListener("change", function (event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function () {
+    const preview = document.getElementById("photoPreview");
+    preview.innerHTML = ""; // 既存の文字を消す
+
+    const img = document.createElement("img");
+    img.src = reader.result;
+
+    preview.appendChild(img);
+  };
+
+  reader.readAsDataURL(file);
+});
+</script>
+
+<!--地図表示をする-->
+<script>
+let map, marker;
+
+function initMap(lat, lng) {
+  map = L.map("map").setView([lat, lng], 15);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap"
+  }).addTo(map);
+
+  marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+
+  marker.on("dragend", () => {
+    const pos = marker.getLatLng();
+    document.getElementById("lat").value = pos.lat.toFixed(6);
+    document.getElementById("lng").value = pos.lng.toFixed(6);
+  });
+}
+
+window.addEventListener("load", () => {
+  initMap(34.452339, 131.764489);
+});
+</script>
+
+<!-- 地図移動 ★★★ -->
+  <script>
+    function getCurrentLocation() {
+      if (!navigator.geolocation) {
+        alert("このブラウザは位置情報に対応していません");
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+
+          map.setView([lat, lng], 17);
+          marker.setLatLng([lat, lng]);
+
+          setTimeout(() => {
+            map.invalidateSize();
+          }, 100);
+        },
+        () => {
+          alert("位置情報の取得に失敗しました");
+        }
+      );
+    }
+  </script>
+  <!--script script script script script script script script script script script script　おわり　-->
+
+  <button onclick="registerVegetable()">登録する</button>
+  <!--script type="module"　script type="module"　script type="module"　script type="module"はじまり--> 
+<script type="module">
+  //===== Supabase 初期設定 =====
+  //自分の Supabase の URL と anon key を入れてください
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+const supabase = createClient(
+  "https://zyvpzobykvuscxuhsrad.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5dnB6b2J5a3Z1c2N4dWhzcmFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3OTE0NTAsImV4cCI6MjA4NTM2NzQ1MH0.Z2cKv3VSlk3iibQl7ldwcff9WF5cBHTZkcrdvxA2Bbk"
+);
+
+/* ===== ① ログイン制御（ここに入れる！） ===== */
+const appArea = document.getElementById("appArea");
+const loginStatus = document.getElementById("loginStatus");
+const logoutBtn = document.querySelector("button[onclick='logout()']");
+console.log("Supabase OK", supabase);
+appArea.classList.add("locked");
+
+/* セッション確認 */
+const { data: { session } } = await supabase.auth.getSession();
+if (session) enableApp(session.user);
+
+/* ログイン */
+window.login = async () => {
+  const emailVal = document.getElementById("email").value;
+  const passwordVal = document.getElementById("password").value;
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: emailVal,
+    password: passwordVal
+  });
+
+  if (error) {
+    loginStatus.textContent = error.message;
+    return;
+  }
+
+  enableApp(data.user);
+};
+
+/* 新規登録 */
+window.signup = async () => {
+  const emailVal = document.getElementById("email").value;
+  const passwordVal = document.getElementById("password").value;
+
+  const { error } = await supabase.auth.signUp({
+    email: emailVal,
+    password: passwordVal
+  });
+
+  if (error) {
+    loginStatus.textContent = error.message;
+    return;
+  }
+
+  loginStatus.textContent = "登録完了";
+};
+
+/* ログアウト */
+window.logout = async () => {
+  await supabase.auth.signOut();
+  location.reload();
+};
+
+function enableApp(user) {
+  appArea.classList.remove("locked");
+  loginStatus.textContent = "ログイン中";
+  logoutBtn.classList.remove("hidden");
+}
+  //===== 現在地を取得する =====
+function getCurrentLocation() {
+  if (!navigator.geolocation) {
+    alert("この端末では位置情報を取得できません");
+    return;
+  }
+
+  alert("高精度で位置を取得します。\n動かずに数秒お待ちください。");
+
+  let bestPosition = null;
+
+  navigator.geolocation.watchPosition(
+    (position) => {
+      const accuracy = position.coords.accuracy;
+
+      // 精度が良いほど数値は小さい（例：5m）
+      if (!bestPosition || accuracy < bestPosition.coords.accuracy) {
+        bestPosition = position;
+
+        document.getElementById("lat").value =
+          position.coords.latitude.toFixed(6);
+        document.getElementById("lng").value =
+          position.coords.longitude.toFixed(6);
+      }
+
+      // 10m以下なら十分 → 監視終了
+      if (accuracy <= 10) {
+        navigator.geolocation.clearWatch(watchId);
+        alert(`位置を取得しました（精度 約${Math.round(accuracy)}m）`);
+      }
+    },
+    (error) => {
+      alert("位置情報の取得に失敗しました");
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 20000,
+      maximumAge: 0
+    }
+  );
+
+  const watchId = navigator.geolocation.watchPosition(()=>{});
+}
+  //===== 野菜登録処理 =====
+async function registerVegetable() {
+
+  // 入力値を取得
+  const farmName = document.getElementById("farm_name").value;
+  const lat = document.getElementById("lat").value;
+  const lng = document.getElementById("lng").value;
+  const vegName = document.getElementById("vegetable_name").value;
+  const unit = document.getElementById("unit").value;
+  const price = document.getElementById("price").value;
+  const comment = document.getElementById("comment").value;
+  const file = document.getElementById("photoInput").files[0];
+
+  // 必須チェック
+  if (!farmName || !vegName || !price || !file) {
+    alert("必須項目が入力されていません");
+    return;
+  }
+  //===== ① 写真を Supabase Storage にアップロード =====
+  const filePath = `vegetables/${Date.now()}_${file.name}`;
+
+  const { error: uploadError } = await supabase
+    .storage
+    .from("images")
+    .upload(filePath, file);
+
+  if (uploadError) {
+    alert("画像アップロードに失敗しました");
+    return;
+  }
+  //===== ② 画像の公開URLを取得 =====
+  const { data: urlData } = supabase
+    .storage
+    .from("images")
+    .getPublicUrl(filePath);
+
+  const imageUrl = urlData.publicUrl;
+  // ===== ③ 野菜データを DB に保存 =====
+  const { error: insertError } = await supabase
+    .from("vegetables")
+    .insert({
+  //    farmer_id: user.id,        // ログイン農家ID
+      farm_name: farmName,
+      latitude: lat,
+      longitude: lng,
+      vegetable_name: vegName,
+      unit: unit,
+      price: price,
+      comment: comment,
+      image_url: imageUrl,
+      is_available: true
+    });
+
+  if (insertError) {
+    alert("登録に失敗しました");
+    return;
+  }
+
+  alert("野菜を登録しました！");
+  location.reload();
+}
+
+    window.getCurrentLocation = getCurrentLocation;// 追加
+    window.registerVegetable = registerVegetable;// 追加
+
+</script>
+  <!--script type="module"　script type="module"　script type="module"　script type="module"おわり　--> 
+</body>
+  <!--body body body body body body body body body body body body body body body　おわり　-->
+</html>

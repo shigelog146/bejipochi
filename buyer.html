@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>野菜購入（事業者用）</title>
+
+<style>
+body {
+  font-family: sans-serif;
+  font-size: 18px;
+  padding: 12px;
+  background: #e1dbdb;
+}
+
+h1 {
+  font-size: 24px;
+  margin-bottom: 16px;
+}
+
+label {
+  font-weight: bold;
+}
+
+input {
+  width: 100%;
+  font-size: 18px;
+  padding: 8px;
+  margin: 6px 0 12px;
+  max-width: 10cm;
+}
+
+.card {
+  background: white;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 18px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+
+  width: 13cm;        /* ← 固定幅（ここ重要） */
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+
+.card img {
+  width: 100%;
+  height: 180px;      /* 高さ固定 */
+  object-fit: cover; /* 切り抜いてフィット */
+  border-radius: 8px;
+}
+
+
+.name {
+  font-size: 20px;
+  font-weight: bold;
+  margin-top: 8px;
+}
+
+.price {
+  color: green;
+  font-size: 18px;
+  margin-top: 4px;
+}
+
+.comment {
+  margin-top: 6px;
+  color: #555;
+}
+
+button {
+  margin-top: 10px;
+  width: 100%;
+  font-size: 18px;
+  padding: 10px;
+  background: #007700;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  max-width: 6cm;
+}
+
+button:active {
+  transform: translateY(2px);
+}
+
+#historyBtn {
+  background: #006636;
+  margin-bottom: 18px;
+}
+
+.card button {
+  margin-top: 8px;
+}
+
+.card button:first-of-type {
+  background: #5479b1;
+}
+
+.card button:last-of-type {
+  margin-top: auto;   /* 下に押し付ける */
+}
+
+img {
+  max-width: min(10cm, 100%);
+  height: auto;
+}
+
+#list {
+  display: flex;
+  flex-wrap: wrap;        /* いっぱいになったら次の行へ */
+  gap: 16px;              /* カード同士の間隔 */
+  align-items: stretch;   /* 高さを揃える */
+}
+
+
+</style>
+</head>
+
+<body>
+
+<h1>本日の野菜（事業者用）</h1>
+
+<button id="historyBtn">購入履歴を見る</button>
+
+
+<label>購入者名（事業者名）</label>
+<input id="buyer_name" placeholder="例：山田青果店">
+
+<div id="list"></div>
+
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+/* Supabase 接続 */
+const supabase = createClient(
+  "https://zyvpzobykvuscxuhsrad.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5dnB6b2J5a3Z1c2N4dWhzcmFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3OTE0NTAsImV4cCI6MjA4NTM2NzQ1MH0.Z2cKv3VSlk3iibQl7ldwcff9WF5cBHTZkcrdvxA2Bbk"
+);
+
+/*
+  野菜一覧取得
+*/
+async function loadVegetables() {
+  const { data, error } = await supabase
+    .from("vegetables")
+    .select("*")
+    .eq("is_available", true)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    alert("野菜の取得に失敗しました");
+    return;
+  }
+
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+
+  data.forEach(v => {
+    const div = document.createElement("div");
+    div.className = "card";
+
+const mapUrl = `https://www.google.com/maps?q=${v.latitude},${v.longitude}`;
+
+div.innerHTML = `
+  <img src="${v.image_url}">
+  <div class="name">${v.vegetable_name}</div>
+  <div>${v.farm_name}</div>
+
+  <button onclick="window.open('${mapUrl}', '_blank')">
+    📍 畑の場所
+  </button>
+
+  <div class="price">${v.price}円 / ${v.unit}</div>
+  <div class="comment">${v.comment || ""}</div>
+
+  <label>購入数量</label>
+  <input type="number" min="1" value="1" id="qty_${v.id}">
+
+  <button onclick="purchase('${v.id}')">購入しました</button>
+`;
+
+    list.appendChild(div);
+  });
+}
+
+/*
+  購入処理
+*/
+async function purchase(vegetableId) {
+//  const buyerId = document.getElementById("buyerId").value;
+  const buyerName = document.getElementById("buyer_name").value;
+//  const quantity  = document.getElementById("quantity").value;
+  const qty = document.getElementById(`qty_${vegetableId}`).value;
+
+if (!buyerName) {
+    alert("購入者名（事業者名）を入力してください");
+    return;
+  }
+
+  if (!qty || qty <= 0) {
+    alert("数量を正しく入力してください");
+    return;
+  }
+
+  /* purchases に記録 */
+  const { error } = await supabase
+    .from("purchases")
+    .insert({
+      vegetable_id: vegetableId,
+      buyer_name: buyerName,
+      quantity: qty
+    });
+
+  if (error) {
+    console.error(error);
+    alert("購入記録に失敗しました");
+    return;
+  }
+
+  /* 売切れ扱い（単品販売前提） */
+  await supabase
+    .from("vegetables")
+    .update({ is_available: false })
+    .eq("id", vegetableId);
+
+  alert("購入を記録しました");
+  loadVegetables();
+}
+
+window.purchase = purchase;
+
+loadVegetables();
+
+//buyer_history.htmlに移動する
+document.getElementById("historyBtn").onclick = () => {
+  // 同じフォルダにある buyer_history.html に移動
+  window.location.href = "buyer_history.html";
+};
+
+
+</script>
+
+</body>
+</html>

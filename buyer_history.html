@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>購入履歴確認（事業者用）</title>
+
+<style>
+body {
+  font-family: sans-serif;
+  background: #f5f5f5;
+  padding: 12px;
+}
+
+h1 {
+  font-size: 22px;
+  margin-bottom: 12px;
+}
+
+input, button {
+  width: 100%;
+  font-size: 18px;
+  padding: 8px;
+  margin-bottom: 10px;
+  max-width: 10cm;
+}
+
+button {
+  background: #005500;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  max-width: 6cm;
+}
+
+.header, .row {
+  display: grid;
+  grid-template-columns: 130px 120px 100px 80px 80px 90px;
+  gap: 6px;
+  padding: 8px;
+  align-items: center;
+}
+
+.header {
+  background: #ddd;
+  font-weight: bold;
+}
+
+.row {
+  background: white;
+  border-bottom: 1px solid #ccc;
+  font-size: 16px;
+}
+</style>
+
+</head>
+
+<body>
+
+<h1>購入履歴確認（事業者用）</h1>
+
+<button onclick="location.href='buyer.html'"
+        style="
+          margin-bottom: 16px;
+          padding: 10px;
+          font-size: 18px;
+          width: 100%;
+          background: #555;
+          color: white;
+          border: none;
+          border-radius: 6px;
+        ">
+  ← 購入画面に戻る
+</button>
+
+<input id="buyer_name" placeholder="事業者名を入力（例：山田青果店）">
+<button onclick="loadHistory()">購入履歴を表示</button>
+
+<div id="list"></div>
+
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+/* Supabase 接続 */
+const supabase = createClient(
+  "https://zyvpzobykvuscxuhsrad.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5dnB6b2J5a3Z1c2N4dWhzcmFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3OTE0NTAsImV4cCI6MjA4NTM2NzQ1MH0.Z2cKv3VSlk3iibQl7ldwcff9WF5cBHTZkcrdvxA2Bbk"
+);
+
+async function loadHistory() {
+  const buyerName = document.getElementById("buyer_name").value;
+  if (!buyerName) {
+    alert("事業者名を入力してください");
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("purchases")
+    .select(`
+      quantity,
+      purchased_at,
+      vegetables (
+        vegetable_name,
+        farm_name,
+        unit,
+        price
+      )
+    `)
+    .eq("buyer_name", buyerName)
+    .order("purchased_at", { ascending: false });
+
+  if (error) {
+    alert("取得に失敗しました");
+    return;
+  }
+
+  const list = document.getElementById("list");
+  list.innerHTML = `
+    <div class="header">
+      <div>購入日</div>
+      <div>野菜</div>
+      <div>農家</div>
+      <div>数量</div>
+      <div>単価</div>
+      <div>合計</div>
+    </div>
+  `;
+
+  data.forEach(p => {
+    const v = p.vegetables;
+
+    const price = Number(v.price);
+    const qty   = Number(p.quantity);
+    const total = price * qty;
+
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `
+      <div>${new Date(p.purchased_at).toLocaleDateString()}</div>
+      <div>${v.vegetable_name}</div>
+      <div>${v.farm_name}</div>
+      <div>${qty} ${v.unit}</div>
+      <div>${price}円</div>
+      <div>${total}円</div>
+    `;
+    list.appendChild(row);
+  });
+}
+
+window.loadHistory = loadHistory;
+</script>
+
+</body>
+</html>
