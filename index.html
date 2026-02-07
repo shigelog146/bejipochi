@@ -455,7 +455,7 @@ function getCurrentLocation() {
 
   let bestPosition = null;
 
-  navigator.geolocation.watchPosition(
+  navigator.geolocation.getCurrentPosition(
     (position) => {
       const accuracy = position.coords.accuracy;
 
