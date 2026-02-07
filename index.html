@@ -190,11 +190,33 @@
 
 #map{
   width: 100%;
-  max-width: 320px;
-  height: 240px;
+  max-width: 500px;
+  height: 400px;
   border: 2px dashed #ccc;
   border-radius: 8px;
   margin-top: 16px;
+}
+
+/* ===== スマホ対応：画面が小さいとき入力欄を大きくする ===== */
+@media screen and (max-width: 600px) {
+
+  input,
+  select,
+  textarea,
+  button {
+    width: 100%;
+    font-size: 18px;
+    padding: 12px;
+    box-sizing: border-box;
+  }
+
+  label {
+    font-size: 16px;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
 }
 
 </style>
@@ -246,11 +268,6 @@
   window.addEventListener('DOMContentLoaded', () => {
     lucide.createIcons();
   });
-
-  // 位置取得の関数（中身は空でも定義しておく必要があります）
-  function getCurrentLocation() {
-    console.log("位置情報を取得中...");
-  }
 </script>
 
   <!-- 緯度・経度の入力欄（横並び） -->
@@ -342,7 +359,7 @@ function initMap(lat, lng) {
 }
 
 window.addEventListener("load", () => {
-  initMap(34.452339, 131.764489);
+  initMap(34.455339, 131.764489);
 });
 </script>
 
@@ -444,49 +461,44 @@ function enableApp(user) {
   loginStatus.textContent = "ログイン中";
   logoutBtn.classList.remove("hidden");
 }
-  //===== 現在地を取得する =====
+
+//===== 現在地を1回だけ取得する =====
 function getCurrentLocation() {
   if (!navigator.geolocation) {
     alert("この端末では位置情報を取得できません");
     return;
   }
 
-  alert("高精度で位置を取得します。\n動かずに数秒お待ちください。");
-
-  let bestPosition = null;
-
   navigator.geolocation.getCurrentPosition(
     (position) => {
-      const accuracy = position.coords.accuracy;
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
 
-      // 精度が良いほど数値は小さい（例：5m）
-      if (!bestPosition || accuracy < bestPosition.coords.accuracy) {
-        bestPosition = position;
+      // 入力欄を更新
+      document.getElementById("lat").value = lat.toFixed(6);
+      document.getElementById("lng").value = lng.toFixed(6);
 
-        document.getElementById("lat").value =
-          position.coords.latitude.toFixed(6);
-        document.getElementById("lng").value =
-          position.coords.longitude.toFixed(6);
-      }
+      // 地図とマーカーを現在地へ移動
+      map.setView([lat, lng], 17);
+      marker.setLatLng([lat, lng]);
 
-      // 10m以下なら十分 → 監視終了
-      if (accuracy <= 10) {
-        navigator.geolocation.clearWatch(watchId);
-        alert(`位置を取得しました（精度 約${Math.round(accuracy)}m）`);
-      }
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 100);
     },
-    (error) => {
+    () => {
       alert("位置情報の取得に失敗しました");
     },
     {
       enableHighAccuracy: true,
-      timeout: 20000,
+      timeout: 10000,
       maximumAge: 0
     }
   );
-
-  const watchId = navigator.geolocation.watchPosition(()=>{});
 }
+
+window.getCurrentLocation = getCurrentLocation;
+
   //===== 野菜登録処理 =====
 async function registerVegetable() {
 
@@ -524,6 +536,7 @@ async function registerVegetable() {
     .getPublicUrl(filePath);
 
   const imageUrl = urlData.publicUrl;
+
   // ===== ③ 野菜データを DB に保存 =====
   const { error: insertError } = await supabase
     .from("vegetables")
@@ -553,7 +566,8 @@ async function registerVegetable() {
     window.registerVegetable = registerVegetable;// 追加
 
 </script>
-  <!--script type="module"　script type="module"　script type="module"　script type="module"おわり　--> 
+
+<!--script type="module"　script type="module"　script type="module"　script "おわり　--> 
 </body>
   <!--body body body body body body body body body body body body body body body　おわり　-->
 </html>
