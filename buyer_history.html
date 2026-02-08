@@ -2,97 +2,70 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>購入履歴確認（事業者用）</title>
-
+<title>購入履歴（事業者用）</title>
 <style>
 body {
   font-family: sans-serif;
-  background: #f5f5f5;
-  padding: 12px;
-}
-
-h1 {
-  font-size: 22px;
-  margin-bottom: 12px;
-}
-
-input, button {
-  width: 100%;
   font-size: 18px;
-  padding: 8px;
-  margin-bottom: 10px;
-  max-width: 10cm;
+  padding: 12px;
+  background: #e1dbdb;
 }
 
-button {
-  background: #005500;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  max-width: 6cm;
+h1 { font-size: 24px; }
+
+#historyList {
+  margin-top: 16px;
 }
 
-.header, .row {
-  display: grid;
-  grid-template-columns: 130px 120px 100px 80px 80px 90px;
-  gap: 6px;
-  padding: 8px;
-  align-items: center;
+.historyCard {
+  background: #fff;
+  padding: 12px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.15);
 }
 
-.header {
-  background: #ddd;
-  font-weight: bold;
-}
-
-.row {
-  background: white;
-  border-bottom: 1px solid #ccc;
-  font-size: 16px;
-}
 </style>
-
 </head>
-
 <body>
 
-<h1>購入履歴確認（事業者用）</h1>
-
-<button onclick="location.href='buyer.html'"
-        style="
-          margin-bottom: 16px;
-          padding: 10px;
-          font-size: 18px;
-          width: 100%;
-          background: #555;
-          color: white;
-          border: none;
-          border-radius: 6px;
-        ">
-  ← 購入画面に戻る
+<button id="backBtn" style="padding:10px 20px; background:#007700; color:#fff; border:none; border-radius:6px; cursor:pointer; margin-bottom:16px;">
+  購入画面に戻る
 </button>
 
-<input id="buyer_name" placeholder="事業者名を入力（例：山田青果店）">
-<button onclick="loadHistory()">購入履歴を表示</button>
+<div id="historyList"></div>
 
-<div id="list"></div>
 
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-/* Supabase 接続 */
 const supabase = createClient(
   "https://zyvpzobykvuscxuhsrad.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5dnB6b2J5a3Z1c2N4dWhzcmFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3OTE0NTAsImV4cCI6MjA4NTM2NzQ1MH0.Z2cKv3VSlk3iibQl7ldwcff9WF5cBHTZkcrdvxA2Bbk"
 );
 
-async function loadHistory() {
-  const buyerName = document.getElementById("buyer_name").value;
-  if (!buyerName) {
-    alert("事業者名を入力してください");
+let currentBuyerId = null;
+
+// ページ初期化
+document.addEventListener("DOMContentLoaded", async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    alert("ログインしてください");
+    location.href = "buyer.html";
     return;
   }
 
+  currentBuyerId = user.id;
+
+  // 購入画面に戻るボタン
+  document.getElementById("backBtn").onclick = () => location.href = "buyer.html";
+
+  // 自分の購入履歴をロード
+  loadHistory();
+});
+
+// 履歴を取得して表示
+async function loadHistory() {
   const { data, error } = await supabase
     .from("purchases")
     .select(`
@@ -105,48 +78,33 @@ async function loadHistory() {
         price
       )
     `)
-    .eq("buyer_name", buyerName)
+    .eq("buyer_id", currentBuyerId)
     .order("purchased_at", { ascending: false });
 
-  if (error) {
-    alert("取得に失敗しました");
+  if (error) return alert("履歴取得に失敗しました");
+
+  const historyList = document.getElementById("historyList");
+  historyList.innerHTML = "";
+
+  if (!data || data.length === 0) {
+    historyList.textContent = "購入履歴はありません。";
     return;
   }
 
-  const list = document.getElementById("list");
-  list.innerHTML = `
-    <div class="header">
-      <div>購入日</div>
-      <div>野菜</div>
-      <div>農家</div>
-      <div>数量</div>
-      <div>単価</div>
-      <div>合計</div>
-    </div>
-  `;
-
   data.forEach(p => {
-    const v = p.vegetables;
-
-    const price = Number(v.price);
-    const qty   = Number(p.quantity);
-    const total = price * qty;
-
-    const row = document.createElement("div");
-    row.className = "row";
-    row.innerHTML = `
-      <div>${new Date(p.purchased_at).toLocaleDateString()}</div>
-      <div>${v.vegetable_name}</div>
-      <div>${v.farm_name}</div>
-      <div>${qty} ${v.unit}</div>
-      <div>${price}円</div>
-      <div>${total}円</div>
+    const div = document.createElement("div");
+    div.className = "historyCard";
+    div.innerHTML = `
+      <div><strong>購入日時：</strong>${new Date(p.purchased_at).toLocaleString()}</div>
+      <div><strong>野菜名：</strong>${p.vegetables.vegetable_name}</div>
+      <div><strong>農家：</strong>${p.vegetables.farm_name}</div>
+      <div><strong>数量：</strong>${p.quantity} ${p.vegetables.unit}</div>
+      <div><strong>単価：</strong>${p.vegetables.price}円</div>
+      <div><strong>合計：</strong>${p.quantity * p.vegetables.price}円</div>
     `;
-    list.appendChild(row);
+    historyList.appendChild(div);
   });
 }
-
-window.loadHistory = loadHistory;
 </script>
 
 </body>
