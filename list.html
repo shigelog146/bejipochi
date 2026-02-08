@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>販売中の野菜一覧</title>
+
+<style>
+  body {
+    font-family: sans-serif;
+    background: #f7f7f7;
+    margin: 0;
+    padding: 12px;
+    font-size: 18px;
+  }
+
+  h1 {
+    font-size: 22px;
+    margin-bottom: 12px;
+  }
+
+.item img {
+  width: 100%;
+  height: 200px;          /* 高さを固定 */
+  object-fit: contain;   /* ★ 切らない */
+  background-color: #f5f5f5;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 600px) {
+  .item img {
+    height: 250px;
+  }
+}
+
+  .name {
+    font-weight: bold;
+    font-size: 20px;
+  }
+
+  .price {
+    color: #444;
+    margin: 4px 0;
+  }
+
+  button {
+    width: 100%;
+    font-size: 18px;
+    padding: 10px;
+    margin-top: 8px;
+    background: #752d2a;
+    color: white;
+    border: none;
+    border-radius: 6px;
+  }
+
+</style>
+</head>
+
+<body>
+
+<h1>販売中の野菜</h1>
+<div id="list"></div>
+
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+const supabase = createClient(
+  "https://zyvpzobykvuscxuhsrad.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5dnB6b2J5a3Z1c2N4dWhzcmFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3OTE0NTAsImV4cCI6MjA4NTM2NzQ1MH0.Z2cKv3VSlk3iibQl7ldwcff9WF5cBHTZkcrdvxA2Bbk"
+);
+
+let currentUser = null;
+
+// 一覧を取得（自分の野菜だけ）
+async function loadItems() {
+
+  // ① ログインユーザー取得
+  const { data: { user }, error: userError } =
+    await supabase.auth.getUser();
+
+  if (userError || !user) {
+    alert("ログインしてください");
+    return;
+  }
+
+  // ② 自分の farmer_id だけ取得
+  const { data, error } = await supabase
+    .from("vegetables")
+    .select("*")
+    .eq("farmer_id", user.id)   // ← ここがポイント
+    .eq("is_available", true)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    alert("読み込み失敗");
+    console.error(error);
+    return;
+  }
+
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+
+  if (data.length === 0) {
+    list.innerHTML = "<p>現在販売中の野菜はありません</p>";
+    return;
+  }
+
+  data.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "item";
+
+    div.innerHTML = `
+      ${item.image_url ? `<img src="${item.image_url}">` : ""}
+      <div class="name">${item.vegetable_name}</div>
+      <div class="price">${item.price}円 / ${item.unit}</div>
+      <button onclick="stopSale('${item.id}')">
+        販売を中止する
+      </button>
+    `;
+
+    list.appendChild(div);
+  });
+}
+
+
+// 販売中止
+async function stopSale(id) {
+  if (!confirm("この野菜を販売中止にしますか？")) return;
+
+  const { error } = await supabase
+    .from("vegetables")
+    .update({ is_available: false })
+    .eq("id", id);
+
+  if (error) {
+    alert("更新失敗");
+    return;
+  }
+
+  loadItems(); // 再読み込み
+}
+
+window.stopSale = stopSale;
+
+loadItems();
+</script>
+
+</body>
+</html>

@@ -258,6 +258,14 @@
 <label>畑の名前</label>
 <input id="farm_name" placeholder="例：山田農園 第1畑">
 
+<div id="farmer-actions" style="display:none;">
+  <button onclick="registerVegetable()">登録する</button>
+
+  <button onclick="location.href='list.html'">
+    販売一覧を見る
+  </button>
+</div>
+
 <label>畑の位置</label>
 <button type="button" onclick="getCurrentLocation()">
   <i data-lucide="carrot"></i> 今いる場所
@@ -391,12 +399,13 @@ window.addEventListener("load", () => {
   </script>
   <!--script script script script script script script script script script script script　おわり　-->
 
-  <button onclick="registerVegetable()">登録する</button>
   <!--script type="module"　script type="module"　script type="module"　script type="module"はじまり--> 
 <script type="module">
   //===== Supabase 初期設定 =====
   //自分の Supabase の URL と anon key を入れてください
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+let currentUser = null;
 
 const supabase = createClient(
   "https://zyvpzobykvuscxuhsrad.supabase.co",
@@ -432,6 +441,21 @@ window.login = async () => {
   enableApp(data.user);
 };
 
+// ===== ログイン状態を確認 =====
+async function checkLogin() {
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (session) {
+    // ログイン後：操作ボタンを表示
+    document.getElementById("farmer-actions").style.display = "block";
+  } else {
+    // ログイン前：非表示のまま
+    document.getElementById("farmer-actions").style.display = "none";
+  }
+}
+
+checkLogin();
+
 /* 新規登録 */
 window.signup = async () => {
   const emailVal = document.getElementById("email").value;
@@ -457,9 +481,16 @@ window.logout = async () => {
 };
 
 function enableApp(user) {
+  currentUser = user; // ★ これが超重要
   appArea.classList.remove("locked");
   loginStatus.textContent = "ログイン中";
   logoutBtn.classList.remove("hidden");
+
+   // ★ 追加：登録・一覧ボタンを表示
+  const actions = document.getElementById("farmer-actions");
+  if (actions) {
+    actions.style.display = "block";
+  }
 }
 
 //===== 現在地を1回だけ取得する =====
@@ -541,7 +572,7 @@ async function registerVegetable() {
   const { error: insertError } = await supabase
     .from("vegetables")
     .insert({
-  //    farmer_id: user.id,        // ログイン農家ID
+      farmer_id: currentUser.id,        // ログイン農家ID
       farm_name: farmName,
       latitude: lat,
       longitude: lng,
