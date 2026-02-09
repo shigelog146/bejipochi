@@ -108,7 +108,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   historyBtn().onclick = () => location.href = "buyer_history.html";
   
   const { data: { user } } = await supabase.auth.getUser();
-  if (user) enableBuyer(user.email);
+  if (user) enableBuyer(user.email, user.id);
 });
 let currentBuyerId = null;//------------------------------------------------------------追加1
 
@@ -134,7 +134,7 @@ async function login() {
   });
   if (error) return alert("ログイン失敗");
 
-  enableBuyer(data.user.email);
+  enableBuyer(data.user.email, data.user.id);
 }
 
 async function signup() {
@@ -185,7 +185,7 @@ async function loadVegetables() {
 
 /* 購入 */
 async function purchase(id) {
-  if (!buyerName().value) return alert("購入者名必須");
+  //if (!buyerName().value) return alert("購入者名必須");
 
   await supabase.from("purchases").insert({
     vegetable_id: id,
