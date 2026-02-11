@@ -18,11 +18,19 @@ h1 { font-size: 24px; }
 }
 
 .historyCard {
-  background: #fff;
-  padding: 12px;
-  border-radius: 10px;
+  display: flex;
+  gap: 12px;
+  padding: 10px;
   margin-bottom: 12px;
-  box-shadow: 0 2px 6px rgba(0,0,0,.15);
+  background: #fff;
+  border-radius: 8px;
+}
+
+.history-photo {
+  width: 70px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 6px;
 }
 
 </style>
@@ -75,7 +83,8 @@ async function loadHistory() {
         vegetable_name,
         farm_name,
         unit,
-        price
+        price,
+        image_url
       )
     `)
     .eq("buyer_id", currentBuyerId)
@@ -95,6 +104,7 @@ async function loadHistory() {
     const div = document.createElement("div");
     div.className = "historyCard";
     div.innerHTML = `
+      <img src="${p.vegetables.image_url}" class="history-photo">
       <div><strong>購入日時：</strong>${new Date(p.purchased_at).toLocaleString()}</div>
       <div><strong>野菜名：</strong>${p.vegetables.vegetable_name}</div>
       <div><strong>農家：</strong>${p.vegetables.farm_name}</div>
