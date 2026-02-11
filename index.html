@@ -382,6 +382,18 @@ const supabase = createClient(
       location.reload();
     });
 
+    /* =============================
+       ユーザー再表示
+    ============================= */
+    window.addEventListener("DOMContentLoaded", async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+         if (user) {
+            document.getElementById("userName").textContent =
+            user.email;
+          }
+
+        });
+
   </script>
 
 </body>
