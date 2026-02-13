@@ -365,6 +365,7 @@
       }
 
       setLogin(data.user);
+      loadVegetables();
       alert("ログイン成功");
     }
 
@@ -406,6 +407,8 @@
       document.getElementById("password").style.display = "none";
       document.getElementById("loginBtn").style.display = "none";
       document.getElementById("signupBtn").style.display = "none";
+      
+      loadVegetables();
     }
 
     /* ボタンイベント紐付け */
