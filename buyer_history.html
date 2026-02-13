@@ -1,121 +1,204 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
-<meta charset="UTF-8">
-<title>購入履歴（事業者用）</title>
-<style>
-body {
-  font-family: sans-serif;
-  font-size: 18px;
-  padding: 12px;
-  background: #e1dbdb;
-}
+  <!-- 文字コード設定 -->
+  <meta charset="UTF-8">
 
-h1 { font-size: 24px; }
+  <!-- スマホ表示最適化 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-#historyList {
-  margin-top: 16px;
-}
+  <!-- ページタイトル -->
+  <title>購入履歴（事業者用）</title>
 
-.historyCard {
-  display: flex;
-  gap: 12px;
-  padding: 10px;
-  margin-bottom: 12px;
-  background: #fff;
-  border-radius: 8px;
-}
+  <style>
+    /* =============================
+       ページ全体の基本デザイン
+    ============================== */
+    body {
+      font-family: sans-serif;   /* フォント指定 */
+      font-size: 20px;           /* 基本文字サイズ */
+      padding: 14px;             /* 内側余白 */
+      background: #e1dbdb;       /* 背景色 */
+    }
 
-.history-photo {
-  width: 70px;
-  height: 70px;
-  object-fit: cover;
-  border-radius: 6px;
-}
+    /* 見出しサイズ */
+    h1 {
+      font-size: 24px;
+    }
 
-</style>
+    /* 履歴リスト全体の余白 */
+    #historyList {
+      margin-top: 16px;
+    }
+
+    /* =============================
+       各購入履歴カードのデザイン
+    ============================== */
+    .historyCard {
+      display: flex;             /* 横並びレイアウト */
+      gap: 14px;                 /* 要素間の間隔 */
+      padding: 14px;             /* 内側余白 */
+      margin-bottom: 14px;       /* 下余白 */
+      background: #fff;          /* 背景色 */
+      border-radius: 10px;       /* 角丸 */
+      font-size: 18px;           /* カード内文字サイズ */
+      line-height: 1.6;          /* 行間 */
+    }
+
+    /* 野菜画像 */
+    .history-photo {
+      width: 90px;
+      height: 90px;
+      object-fit: cover;         /* 画像トリミング */
+      border-radius: 8px;
+    }
+
+    /* =============================
+       小さいスマホ用レイアウト調整
+    ============================== */
+    @media (max-width: 480px) {
+
+      body {
+        font-size: 22px;         /* 全体フォント拡大 */
+      }
+
+      h1 {
+        font-size: 28px;         /* タイトル拡大 */
+      }
+
+      .historyCard {
+        flex-direction: column;  /* 縦並びに変更 */
+        font-size: 20px;         /* カード文字拡大 */
+      }
+
+      .history-photo {
+        width: 100%;             /* 横幅いっぱい */
+        height: 200px;           /* 高さ固定 */
+      }
+
+      button {
+        font-size: 20px;
+        padding: 14px;
+      }
+    }
+
+  </style>
 </head>
+
 <body>
 
-<button id="backBtn" style="padding:10px 20px; background:#007700; color:#fff; border:none; border-radius:6px; cursor:pointer; margin-bottom:16px;">
-  購入画面に戻る
-</button>
+  <!-- =============================
+       購入画面に戻るボタン
+  ============================== -->
+  <button id="backBtn"
+          style="font-size: 20px; padding:10px 20px; background:#007700; color:#fff; border:none; border-radius:6px; cursor:pointer; margin-bottom:16px;">
+    購入画面に戻る
+  </button>
 
-<div id="historyList"></div>
+  <!-- 購入履歴表示エリア -->
+  <div id="historyList"></div>
 
+  <!-- =============================
+       JavaScript（Supabase連携）
+  ============================== -->
+  <script type="module">
 
-<script type="module">
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+    /* Supabaseライブラリ読み込み */
+    import { createClient }
+      from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-const supabase = createClient(
-  "https://zyvpzobykvuscxuhsrad.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5dnB6b2J5a3Z1c2N4dWhzcmFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3OTE0NTAsImV4cCI6MjA4NTM2NzQ1MH0.Z2cKv3VSlk3iibQl7ldwcff9WF5cBHTZkcrdvxA2Bbk"
-);
+    /* Supabase接続設定 */
+    const supabase = createClient(
+      "https://zyvpzobykvuscxuhsrad.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5dnB6b2J5a3Z1c2N4dWhzcmFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3OTE0NTAsImV4cCI6MjA4NTM2NzQ1MH0.Z2cKv3VSlk3iibQl7ldwcff9WF5cBHTZkcrdvxA2Bbk"
+    );
 
-let currentBuyerId = null;
+    /* 現在ログイン中の購入者ID */
+    let currentBuyerId = null;
 
-// ページ初期化
-document.addEventListener("DOMContentLoaded", async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    alert("ログインしてください");
-    location.href = "buyer.html";
-    return;
-  }
+    /* =============================
+       ページ読み込み時の初期処理
+    ============================== */
+    document.addEventListener("DOMContentLoaded", async () => {
 
-  currentBuyerId = user.id;
+      /* ログインユーザー取得 */
+      const { data: { user } } = await supabase.auth.getUser();
 
-  // 購入画面に戻るボタン
-  document.getElementById("backBtn").onclick = () => location.href = "buyer.html";
+      /* 未ログインなら購入画面へ戻す */
+      if (!user) {
+        alert("ログインしてください");
+        location.href = "buyer.html";
+        return;
+      }
 
-  // 自分の購入履歴をロード
-  loadHistory();
-});
+      /* ログインユーザーID保存 */
+      currentBuyerId = user.id;
 
-// 履歴を取得して表示
-async function loadHistory() {
-  const { data, error } = await supabase
-    .from("purchases")
-    .select(`
-      quantity,
-      purchased_at,
-      vegetables (
-        vegetable_name,
-        farm_name,
-        unit,
-        price,
-        image_url
-      )
-    `)
-    .eq("buyer_id", currentBuyerId)
-    .order("purchased_at", { ascending: false });
+      /* 戻るボタンのクリック処理 */
+      document.getElementById("backBtn").onclick =
+        () => location.href = "buyer.html";
 
-  if (error) return alert("履歴取得に失敗しました");
+      /* 購入履歴読み込み */
+      loadHistory();
+    });
 
-  const historyList = document.getElementById("historyList");
-  historyList.innerHTML = "";
+    /* =============================
+       購入履歴取得＆表示処理
+    ============================== */
+    async function loadHistory() {
 
-  if (!data || data.length === 0) {
-    historyList.textContent = "購入履歴はありません。";
-    return;
-  }
+      /* purchasesテーブルから履歴取得 */
+      const { data, error } = await supabase
+        .from("purchases")
+        .select(`
+          quantity,
+          purchased_at,
+          vegetables (
+            vegetable_name,
+            farm_name,
+            unit,
+            price,
+            image_url
+          )
+        `)
+        .eq("buyer_id", currentBuyerId)
+        .order("purchased_at", { ascending: false });
 
-  data.forEach(p => {
-    const div = document.createElement("div");
-    div.className = "historyCard";
-    div.innerHTML = `
-      <img src="${p.vegetables.image_url}" class="history-photo">
-      <div><strong>購入日時：</strong>${new Date(p.purchased_at).toLocaleString()}</div>
-      <div><strong>野菜名：</strong>${p.vegetables.vegetable_name}</div>
-      <div><strong>農家：</strong>${p.vegetables.farm_name}</div>
-      <div><strong>数量：</strong>${p.quantity} ${p.vegetables.unit}</div>
-      <div><strong>単価：</strong>${p.vegetables.price}円</div>
-      <div><strong>合計：</strong>${p.quantity * p.vegetables.price}円</div>
-    `;
-    historyList.appendChild(div);
-  });
-}
-</script>
+      if (error) return alert("履歴取得に失敗しました");
+
+      /* 表示エリア取得 */
+      const historyList = document.getElementById("historyList");
+      historyList.innerHTML = "";
+
+      /* データが空の場合 */
+      if (!data || data.length === 0) {
+        historyList.textContent = "購入履歴はありません。";
+        return;
+      }
+
+      /* 1件ずつカード生成 */
+      data.forEach(p => {
+
+        const div = document.createElement("div");
+        div.className = "historyCard";
+
+        /* カード内HTML作成 */
+        div.innerHTML = `
+          <img src="${p.vegetables.image_url}" class="history-photo">
+          <div><strong>購入日時：</strong>${new Date(p.purchased_at).toLocaleString()}</div>
+          <div><strong>野菜名：</strong>${p.vegetables.vegetable_name}</div>
+          <div><strong>農家：</strong>${p.vegetables.farm_name}</div>
+          <div><strong>数量：</strong>${p.quantity} ${p.vegetables.unit}</div>
+          <div><strong>単価：</strong>${p.vegetables.price}円</div>
+          <div><strong>合計：</strong>${p.quantity * p.vegetables.price}円</div>
+        `;
+
+        historyList.appendChild(div);
+      });
+    }
+
+  </script>
 
 </body>
 </html>
