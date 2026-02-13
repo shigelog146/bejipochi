@@ -141,6 +141,16 @@
 
       /* 購入履歴読み込み */
       loadHistory();
+
+      window.openMap = function(lat, lng) {
+        if (!lat || !lng) {
+          alert("位置情報が登録されていません");
+          return;
+        }
+
+        const url = `https://www.google.com/maps?q=${lat},${lng}`;
+        window.open(url, "_blank");
+      };
     });
 
     /* =============================
@@ -159,7 +169,9 @@
             farm_name,
             unit,
             price,
-            image_url
+            image_url,
+            latitude,
+            longitude
           )
         `)
         .eq("buyer_id", currentBuyerId)
@@ -192,6 +204,10 @@
           <div><strong>数量：</strong>${p.quantity} ${p.vegetables.unit}</div>
           <div><strong>単価：</strong>${p.vegetables.price}円</div>
           <div><strong>合計：</strong>${p.quantity * p.vegetables.price}円</div>
+
+          <button onclick="openMap(${p.vegetables.latitude}, ${p.vegetables.longitude})">
+             畑の地図を見る
+          </button>
         `;
 
         historyList.appendChild(div);
