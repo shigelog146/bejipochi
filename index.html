@@ -122,7 +122,13 @@
     <h1>本日の野菜を登録</h1>
 
     <label>畑の名前</label>
-    <input id="farm_name">
+    <input id="farm_name" list="farm_list" placeholder="畑を選択または入力">
+
+    <datalist id="farm_list">
+      <option value="畑1">
+      <option value="畑2">
+      <option value="畑3">
+    </datalist>
 
     <label>畑の位置</label>
     <button id="locationBtn">今いる場所</button>
