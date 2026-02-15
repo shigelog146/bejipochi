@@ -154,6 +154,26 @@
     });
 
     /* =============================
+       購入済処理
+    ============================== */
+      window.markReceived = async function(id) {
+
+        const { error } = await supabase
+          .from("purchases")
+          .update({ is_received: true })
+          .eq("id", id);
+
+        if (error) {
+          alert("更新失敗");
+          console.log(error);
+          return;
+        }
+
+        alert("受取完了にしました");
+        loadHistory(); // 再読み込み
+      };
+
+    /* =============================
        購入履歴取得＆表示処理
     ============================== */
     async function loadHistory() {
@@ -162,8 +182,10 @@
       const { data, error } = await supabase
         .from("purchases")
         .select(`
+          id,
           quantity,
           purchased_at,
+          is_received,
           vegetables (
             vegetable_name,
             farm_name,
@@ -195,7 +217,7 @@
         const div = document.createElement("div");
         div.className = "historyCard";
 
-        /* カード内HTML作成 */
+      /* カード内HTML作成 */
         div.innerHTML = `
           <img src="${p.vegetables.image_url}" class="history-photo">
           <div><strong>購入日時：</strong>${new Date(p.purchased_at).toLocaleString()}</div>
@@ -204,6 +226,14 @@
           <div><strong>数量：</strong>${p.quantity} ${p.vegetables.unit}</div>
           <div><strong>単価：</strong>${p.vegetables.price}円</div>
           <div><strong>合計：</strong>${p.quantity * p.vegetables.price}円</div>
+          
+          ${
+            p.is_received
+            ? `<div style="color:green;font-weight:bold;">受取済</div>`
+            : `<button onclick="markReceived('${p.id}')">
+                 購入済にする
+               </button>`
+          }
 
           <button onclick="openMap(${p.vegetables.latitude}, ${p.vegetables.longitude})">
              畑の地図を見る

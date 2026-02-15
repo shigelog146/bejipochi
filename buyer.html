@@ -266,9 +266,10 @@
 
           <button
             ${disabled}
-            onclick="purchase('${v.id}')"
+            onclick="purchase('${v.id}', '${v.farmer_id}')"
             style="opacity:${opacity}; cursor:${currentUser ? 'pointer' : 'not-allowed'};"
           >
+
             ${label}
           </button>
         `;
@@ -282,8 +283,10 @@
     /* =========================
        購入処理
     ========================== */
-    async function purchase(vegetableId) {
+    async function purchase(vegetableId, farmerId) {
 
+      const { data: { user } } = await supabase.auth.getUser();
+      
       if (!currentUser) {
         alert("ログインしてください");
         return;
@@ -307,7 +310,9 @@
         .from("purchases")
         .insert({
           vegetable_id: vegetableId,
+          buyer_id: user.id,
           buyer_name: buyerName,
+          farmer_id: farmerId,
           quantity: qty
         });
 
