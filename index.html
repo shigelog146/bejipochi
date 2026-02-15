@@ -254,7 +254,11 @@ const supabase = createClient(
        ============================= */
     logoutBtn.addEventListener("click", async () => {
       await supabase.auth.signOut();
-      location.reload();
+      currentUser = null;
+      appArea.classList.add("locked");
+      logoutBtn.classList.add("hidden");
+      loginStatus.textContent = "";
+      document.getElementById("userEmail").textContent = "";
     });
 
     /* =============================
@@ -266,7 +270,7 @@ const supabase = createClient(
 
       appArea.classList.remove("locked");
       logoutBtn.classList.remove("hidden");
-      loginStatus.textContent = "ログイン中";
+      loginStatus.textContent = `ログイン中：${user.email}`;
 
       document.getElementById("farmer-actions")
         .style.display = "block";
