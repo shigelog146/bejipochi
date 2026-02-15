@@ -413,6 +413,12 @@
       document.getElementById("loginBtn").style.display = "none";
       document.getElementById("signupBtn").style.display = "none";
       
+        const buyerInput = document.getElementById("buyer_name");
+         if (buyerInput) {
+           buyerInput.value = user.email;
+           // readOnly は付けない（編集可能にするため）
+         }
+         
       loadVegetables();
     }
 
