@@ -238,7 +238,7 @@ const supabase = createClient(
        ============================= */
     signupBtn.addEventListener("click", async () => {
 
-      const emailValu = document.getElementById("email").value;
+      const emailValue = document.getElementById("email").value;
       const passwordValue = document.getElementById("password").value;
 
       const { error } =
@@ -361,6 +361,50 @@ const supabase = createClient(
         });
   
     /* =============================
+       画像圧縮関数
+       ============================= */
+      async function compressImage(file) {
+         const img = new Image();
+         const reader = new FileReader();
+
+         return new Promise((resolve) => {
+           reader.onload = (e) => {
+             img.src = e.target.result;
+           };
+
+           img.onload = () => {
+             const canvas = document.createElement("canvas");
+             const ctx = canvas.getContext("2d");
+
+             const MAX_WIDTH = 1200;
+
+             let width = img.width;
+             let height = img.height;
+
+             if (width > MAX_WIDTH) {
+               height = height * (MAX_WIDTH / width);
+               width = MAX_WIDTH;
+             }
+
+             canvas.width = width;
+             canvas.height = height;
+
+             ctx.drawImage(img, 0, 0, width, height);
+
+             canvas.toBlob(
+               (blob) => {
+                 resolve(blob);
+               },
+               "image/jpeg",
+               0.7   // 品質
+             );
+           };
+
+           reader.readAsDataURL(file);
+         });
+       }
+
+    /* =============================
        野菜登録
        ============================= */
     registerBtn.addEventListener("click", async () => {
@@ -395,13 +439,20 @@ const supabase = createClient(
         return;
       }
 
+      const compressedBlob =
+        await compressImage(file);
+      console.log("元サイズ:", file.size / 1024, "KB");
+      console.log("圧縮後:", compressedBlob.size / 1024, "KB");
+
       const filePath =
-        `vegetables/${Date.now()}_${file.name}`;
+        `vegetables/${Date.now()}.jpg`;
 
       await supabase
         .storage
         .from("images")
-        .upload(filePath, file);
+        .upload(filePath, compressedBlob, {
+          contentType: "image/jpeg"
+        });
 
       const { data: urlData } =
         supabase.storage
