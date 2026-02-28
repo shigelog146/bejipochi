@@ -150,6 +150,9 @@
        ===================================== */
     async function loadItems() {
 
+      // セッション復元
+      await supabase.auth.getSession();
+
       // ① ログインユーザー取得
       const { data: { user }, error: userError } =
         await supabase.auth.getUser();

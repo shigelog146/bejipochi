@@ -241,7 +241,7 @@ const supabase = createClient(
       const emailValue = document.getElementById("email").value;
       const passwordValue = document.getElementById("password").value;
 
-      const { error } =
+      const { data, error } =
         await supabase.auth.signUp({
           email: emailValue,
           password: passwordValue
@@ -252,7 +252,8 @@ const supabase = createClient(
         return;
       }
 
-      loginStatus.textContent = "登録完了";
+      loginStatus.textContent =
+        "確認メールを送信しました。メールを確認してください。";
     });
 
     /* =============================
@@ -270,20 +271,89 @@ const supabase = createClient(
     /* =============================
        ログイン成功時処理
        ============================= */
-    function enableApp(user) {
+    async function enableApp(user) {
 
-      currentUser = user;
+    currentUser = user;
 
-      appArea.classList.remove("locked");
-      logoutBtn.classList.remove("hidden");
-      loginStatus.textContent = `ログイン中：${user.email}`;
+  logoutBtn.classList.remove("hidden");
+  loginStatus.textContent = `ログイン中：${user.email}`;
 
-      document.getElementById("farmer-actions")
-        .style.display = "block";
+  // profiles確認
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
 
-      document.getElementById("register-area")
-        .style.display = "block";
+  // 初回ログイン → profiles作成
+  if (error || !profile) {
+
+    const { error: insertError } = await supabase
+      .from("profiles")
+      .insert([
+        {
+          id: user.id,
+          role: "farmer",
+          approved: false
+        }
+      ]);
+
+    if (insertError) {
+      console.error("profiles作成失敗:", insertError);
+      alert("プロフィール作成エラー");
+      return;
     }
+
+    alert("管理者の承認後に利用可能です");
+    appArea.classList.add("locked");
+    return;
+  }
+
+  // 🔴 roleチェック
+  if (profile.role !== "farmer") {
+     alert("このアカウントは農家用ではありません");
+     await supabase.auth.signOut();
+     appArea.classList.add("locked");
+     return;
+  }
+
+  // 承認チェック
+  if (profile.role !== "farmer") {
+    alert("農家アカウントのみ登録できます");
+    return;
+  }
+
+  if (!profile.approved) {
+    alert("管理者の承認後に利用可能です");
+    appArea.classList.add("locked");
+    return;
+  }
+
+  // 承認済みのみ解放
+  appArea.classList.remove("locked");
+
+  document.getElementById("farmer-actions")
+    .style.display = "block";
+
+  document.getElementById("register-area")
+    .style.display = "block";
+}
+
+  // ===============================
+  // 認証状態の変化を監視（UI更新のみ）
+  // ===============================
+    supabase.auth.onAuthStateChange((event, session) => {
+
+    console.log("認証イベント:", event);
+
+    if (!session) {
+      currentUser = null;
+      appArea.classList.add("locked");
+      logoutBtn.classList.add("hidden");
+      loginStatus.textContent = "ログアウト状態";
+   }
+
+  });
 
     /* =============================
        地図初期化
@@ -409,10 +479,21 @@ const supabase = createClient(
        ============================= */
     registerBtn.addEventListener("click", async () => {
 
-      if (!currentUser) {
-        alert("ログインしてください");
-        return;
-      }
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      alert("ログインしてください");
+      return;
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("approved")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile.approved) {
+      return;
+    }
 
       const farmName =
         document.getElementById("farm_name").value;
@@ -447,6 +528,10 @@ const supabase = createClient(
       const filePath =
         `vegetables/${Date.now()}.jpg`;
 
+    // ===============================
+    // 画像アップロード
+    // ===============================
+    const { data: uploadData, error: uploadError } =
       await supabase
         .storage
         .from("images")
@@ -454,24 +539,42 @@ const supabase = createClient(
           contentType: "image/jpeg"
         });
 
+    if (uploadError) {
+      console.error("画像アップロード失敗:", uploadError);
+      alert(uploadError.message);
+      return;
+    }
+
       const { data: urlData } =
         supabase.storage
           .from("images")
           .getPublicUrl(filePath);
 
+    // ===============================
+    // 野菜データ登録
+    // ===============================
+    const { data: insertData, error: insertError } =
       await supabase
         .from("vegetables")
-        .insert({
-          farmer_id: currentUser.id,
-          farm_name: farmName,
-          latitude: lat,
-          longitude: lng,
-          vegetable_name: vegName,
-          price: price,
-          unit: unit,
-          image_url: urlData.publicUrl,
-          is_available: true
-        });
+        .insert([
+          {
+            farmer_id: currentUser.id,  // ← RLSと一致必須
+            farm_name: farmName,
+            latitude: parseFloat(lat),
+            longitude: parseFloat(lng),
+            vegetable_name: vegName,
+            price: parseInt(price),
+            unit: unit,
+            image_url: urlData.publicUrl,
+            is_available: true
+          }
+        ]);
+
+    if (insertError) {
+      console.error("登録失敗:", insertError);
+      alert(insertError.message);
+      return;
+    }
 
       alert("登録完了");
       location.reload();
