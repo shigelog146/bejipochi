@@ -173,6 +173,48 @@
         loadHistory(); // 再読み込み
       };
 
+/* =============================
+   キャンセル処理（在庫復活版）
+============================= */
+window.cancelPurchase = async function(purchaseId, vegetableId) {
+
+  const confirmCancel = confirm("この購入をキャンセルしますか？");
+  if (!confirmCancel) return;
+
+  // ============================
+  // ① purchases を完全削除（履歴から消す）
+  // ============================
+  const { error: purchaseError } = await supabase
+    .from("purchases")
+    .delete()
+    .eq("id", purchaseId);
+
+  if (purchaseError) {
+    alert("キャンセル失敗（購入履歴削除）");
+    console.log(purchaseError);
+    return;
+  }
+
+  // ============================
+  // ② vegetables を再販売可能に
+  // ============================
+  const { error: vegError } = await supabase
+    .from("vegetables")
+    .update({ is_available: true })
+    .eq("id", vegetableId);
+
+  if (vegError) {
+    alert("在庫復活失敗");
+    console.log(vegError);
+    return;
+  }
+
+  alert("キャンセルして再販売可能にしました");
+
+  loadHistory(); // 再読み込み
+};
+
+
     /* =============================
        購入履歴取得＆表示処理
     ============================== */
@@ -187,6 +229,7 @@
           purchased_at,
           is_received,
           vegetables (
+            id,
             vegetable_name,
             farm_name,
             unit,
@@ -199,7 +242,11 @@
         .eq("buyer_id", currentBuyerId)
         .order("purchased_at", { ascending: false });
 
-      if (error) return alert("履歴取得に失敗しました");
+      if (error) {
+        console.error("loadHistoryエラー", error);
+        alert("履歴取得に失敗しました（詳細はコンソール）");
+        return;
+      }
 
       /* 表示エリア取得 */
       const historyList = document.getElementById("historyList");
@@ -227,13 +274,22 @@
           <div><strong>単価：</strong>${p.vegetables.price}円</div>
           <div><strong>合計：</strong>${p.quantity * p.vegetables.price}円</div>
           
-          ${
-            p.is_received
-            ? `<div style="color:green;font-weight:bold;">受取済</div>`
-            : `<button onclick="markReceived('${p.id}')">
-                 購入済にする
-               </button>`
-          }
+${
+  p.is_received
+  ? `<div style="display:flex;gap:10px;align-items:center;">
+       <div style="color:green;font-weight:bold;">受取済</div>
+     </div>`
+  : `<div style="display:flex;gap:8px;flex-wrap:wrap;">
+       <button onclick="markReceived('${p.id}')"
+               style="background:#007700;color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;">
+         購入済にする
+       </button>
+       <button onclick="cancelPurchase('${p.id}', '${p.vegetables.id}')"
+               style="background:#cc0000;color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;">
+         キャンセル
+       </button>
+     </div>`
+}
 
           <button onclick="openMap(${p.vegetables.latitude}, ${p.vegetables.longitude})">
              畑の地図を見る
