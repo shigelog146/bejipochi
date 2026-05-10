@@ -106,7 +106,27 @@
        ============================= -->
   <div id="loginPanel">
     <input id="email" type="email" placeholder="メール">
-    <input id="password" type="password" placeholder="パスワード">
+    <div style="position:relative; max-width:500px;">
+
+      <input id="password" type="password" placeholder="パスワード" style="padding-right:60px;">
+
+      <button type="button" id="togglePassword" style="
+      position:absolute;
+      right:10px;
+      top:50%;
+      transform:translateY(-50%);
+      background:none;
+      border:none;
+      cursor:pointer;
+      font-size:18px;
+      color:#555;
+      margin:0;
+      padding:0;
+    ">
+        👁
+      </button>
+
+    </div>
 
     <!-- onclick廃止。IDで管理 -->
     <button id="loginBtn">ログイン</button>
@@ -210,6 +230,32 @@
     const loginStatus = document.getElementById("loginStatus");
     const locationBtn = document.getElementById("locationBtn");
     const registerBtn = document.getElementById("registerBtn");
+
+    /* =============================
+       パスワード表示切替
+    ============================= */
+    const passwordInput =
+      document.getElementById("password");
+
+    const togglePassword =
+      document.getElementById("togglePassword");
+
+    togglePassword.addEventListener("click", () => {
+
+      // password ⇔ text 切替
+      if (passwordInput.type === "password") {
+
+        passwordInput.type = "text";
+        togglePassword.textContent = "🙈";
+
+      } else {
+
+        passwordInput.type = "password";
+        togglePassword.textContent = "👁";
+
+      }
+
+    });
 
     /* =============================
        セッション確認（ページ読み込み時）

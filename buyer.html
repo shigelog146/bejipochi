@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,7 +14,7 @@
     * {
       box-sizing: border-box;
     }
-    
+
     body {
       font-family: sans-serif;
       font-size: 20px;
@@ -44,8 +45,8 @@
       border-radius: 2px;
       padding: 12px;
       margin-bottom: 18px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      width: 100%; 
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      width: 100%;
       max-width: 420px;
       box-sizing: border-box;
       display: flex;
@@ -54,8 +55,10 @@
 
     .card img {
       width: 100%;
-      height: 180px;            /* 高さ固定 */
-      object-fit: cover;        /* 切り抜き表示 */
+      height: 180px;
+      /* 高さ固定 */
+      object-fit: cover;
+      /* 切り抜き表示 */
       border-radius: 2px;
     }
 
@@ -105,7 +108,8 @@
     }
 
     .card button:last-of-type {
-      margin-top: auto;   /* 下に押し付ける */
+      margin-top: auto;
+      /* 下に押し付ける */
     }
 
     img {
@@ -125,15 +129,15 @@
       body {
         font-size: 22px;
       }
-      
+
       h1 {
         font-size: 28px;
       }
-      
+
       .name {
         font-size: 24px;
       }
-      
+
       .price {
         font-size: 20px;
       }
@@ -164,11 +168,36 @@
        ログインエリア
   ========================== -->
   <div id="authArea">
-    <h3 id="authTitle"><img src="icon/icons8-beet-50.png" 
-       class="heading-icon">まちごと八百屋</h3>
+    <h3 id="authTitle"><img src="icon/icons8-beet-50.png" class="heading-icon">まちごと八百屋</h3>
 
     <input id="email" type="email" placeholder="メールアドレス">
-    <input id="password" type="password" placeholder="パスワード">
+
+    <div style="
+  position:relative;
+  width:100%;
+  max-width:500px;
+">
+
+      <input id="password" type="password" placeholder="パスワード" style="padding-right:60px;">
+
+      <button type="button" id="togglePassword" style="
+      position:absolute;
+      right:10px;
+      top:50%;
+      transform:translateY(-50%);
+      background:none;
+      border:none;
+      color:#555;
+      font-size:22px;
+      width:auto;
+      padding:0;
+      margin:0;
+      cursor:pointer;
+    ">
+        👁
+      </button>
+
+    </div>
 
     <button id="loginBtn">ログイン</button>
     <button id="signupBtn">新規登録</button>
@@ -216,9 +245,9 @@
     let currentUser = null;
 
     // セッションを確実に復元
-// ======================================
-// ページ読み込み時：ログイン＋role確認
-// ======================================
+    // ======================================
+    // ページ読み込み時：ログイン＋role確認
+    // ======================================
     document.addEventListener("DOMContentLoaded", async () => {
 
       const { data: sessionData } = await supabase.auth.getSession();
@@ -254,7 +283,7 @@
         return;
       }
 
-     // 承認チェック
+      // 承認チェック
       if (!profile.approved) {
         alert("承認待ちです。管理者の承認をお待ちください。");
         return;
@@ -330,7 +359,7 @@
     async function purchase(vegetableId, farmerId) {
 
       const { data: sessionData } = await supabase.auth.getSession();
-      
+
       if (!sessionData.session) {
         alert("ログインしてください");
         return;
@@ -434,7 +463,7 @@
         .from("profiles")
         .select("*")
         .eq("id", user.id)
-       .single();
+        .single();
 
       if (profileError || !profile) {
         alert("プロフィールが存在しません");
@@ -502,11 +531,11 @@
             phone: ""
           });
 
-          if (profileError) {
-            console.error("profile作成エラー:", profileError);
-            alert("プロフィール作成失敗：" + profileError.message);
-            return;
-          }
+        if (profileError) {
+          console.error("profile作成エラー:", profileError);
+          alert("プロフィール作成失敗：" + profileError.message);
+          return;
+        }
       }
 
       alert("登録完了。管理者承認後に利用できます。");
@@ -533,17 +562,46 @@
 
       document.getElementById("email").style.display = "none";
       document.getElementById("password").style.display = "none";
+
+      document.getElementById("togglePassword")
+        .style.display = "none";
       document.getElementById("loginBtn").style.display = "none";
       document.getElementById("signupBtn").style.display = "none";
-      
-        const buyerInput = document.getElementById("buyer_name");
-         if (buyerInput) {
-           buyerInput.value = user.email;
-           // readOnly は付けない（編集可能にするため）
-         }
-         
+
+      const buyerInput = document.getElementById("buyer_name");
+      if (buyerInput) {
+        buyerInput.value = user.email;
+        // readOnly は付けない（編集可能にするため）
+      }
+
       loadVegetables();
     }
+
+    /* ボタンイベント紐付け */
+    /* =========================
+       パスワード表示切替
+    ========================= */
+    const passwordInput =
+      document.getElementById("password");
+
+    const togglePassword =
+      document.getElementById("togglePassword");
+
+    togglePassword.addEventListener("click", () => {
+
+      if (passwordInput.type === "password") {
+
+        passwordInput.type = "text";
+        togglePassword.textContent = "🙈";
+
+      } else {
+
+        passwordInput.type = "password";
+        togglePassword.textContent = "👁";
+
+      }
+
+    });
 
     /* ボタンイベント紐付け */
     document.getElementById("loginBtn").onclick = login;
@@ -553,4 +611,5 @@
   </script>
 
 </body>
+
 </html>
