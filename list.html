@@ -288,14 +288,17 @@ async function updateItem(id) {
       .value
       .trim();
 
-  const price =
-    document.getElementById(`price_${id}`)
-      .value;
+const price =
+  document.getElementById(`price_${id}`)
+    .value;
 
-  const comment =
-    document.getElementById(`comment_${id}`)
-      .value
-      .trim();
+// ↓ 追加
+const priceNumber = Number(price);
+
+const comment =
+  document.getElementById(`comment_${id}`)
+    .value
+    .trim();
 
   // 入力チェック
   if (!vegetable_name) {
@@ -303,17 +306,17 @@ async function updateItem(id) {
     return;
   }
 
-  if (!price || price <= 0) {
-    alert("価格を正しく入力してください");
-    return;
-  }
+if (isNaN(priceNumber) || priceNumber < 0) {
+  alert("価格を正しく入力してください");
+  return;
+}
 
   // UPDATE実行
   const { error } = await supabase
     .from("vegetables")
     .update({
       vegetable_name: vegetable_name,
-      price: parseInt(price),
+      price: priceNumber,
       comment: comment
     })
     .eq("id", id);
