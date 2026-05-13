@@ -73,7 +73,28 @@
       border: none;
       border-radius: 8px;
     }
+/* 編集用input */
+.edit-input,
+.edit-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 18px;
+  padding: 10px;
+  margin-top: 6px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
 
+/* コメント欄 */
+.edit-textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+/* 保存ボタン */
+.save-btn {
+  background: #2f7d32;
+}
     /* スマホ小画面対応 */
     @media (max-width: 480px) {
       body {
@@ -193,14 +214,45 @@
         const div = document.createElement("div");
         div.className = "item";
 
-        div.innerHTML = `
-          ${item.image_url ? `<img src="${item.image_url}">` : ""}
-          <div class="name">${item.vegetable_name}</div>
-          <div class="price">${item.price}円 / ${item.unit}</div>
-          <button onclick="stopSale('${item.id}')">
-            販売を中止する
-          </button>
-        `;
+div.innerHTML = `
+  ${item.image_url ? `<img src="${item.image_url}">` : ""}
+
+  <label>野菜名</label>
+  <input
+    class="edit-input"
+    id="name_${item.id}"
+    value="${item.vegetable_name || ""}"
+  >
+
+  <label>価格</label>
+  <input
+    class="edit-input"
+    type="number"
+    id="price_${item.id}"
+    value="${item.price || 0}"
+  >
+
+  <label>コメント</label>
+  <textarea
+    class="edit-textarea"
+    id="comment_${item.id}"
+  >${item.comment || ""}</textarea>
+
+  <div class="price">
+    ${item.unit || ""}
+  </div>
+
+  <button
+    class="save-btn"
+    onclick="updateItem('${item.id}')"
+  >
+    保存する
+  </button>
+
+  <button onclick="stopSale('${item.id}')">
+    販売を中止する
+  </button>
+`;
 
         list.appendChild(div);
       });
@@ -226,9 +278,57 @@
 
       loadItems(); // 再読み込み
     }
+/* =====================================
+   野菜情報更新
+   ===================================== */
+async function updateItem(id) {
 
+  const vegetable_name =
+    document.getElementById(`name_${id}`)
+      .value
+      .trim();
+
+  const price =
+    document.getElementById(`price_${id}`)
+      .value;
+
+  const comment =
+    document.getElementById(`comment_${id}`)
+      .value
+      .trim();
+
+  // 入力チェック
+  if (!vegetable_name) {
+    alert("野菜名を入力してください");
+    return;
+  }
+
+  if (!price || price <= 0) {
+    alert("価格を正しく入力してください");
+    return;
+  }
+
+  // UPDATE実行
+  const { error } = await supabase
+    .from("vegetables")
+    .update({
+      vegetable_name: vegetable_name,
+      price: parseInt(price),
+      comment: comment
+    })
+    .eq("id", id);
+
+  if (error) {
+    console.error(error);
+    alert("更新失敗");
+    return;
+  }
+
+  alert("保存しました");
+}
     /* HTML側から呼べるようにする */
-    window.stopSale = stopSale;
+window.stopSale = stopSale;
+window.updateItem = updateItem;
 
     /* ページ読み込み時に一覧取得 */
     loadItems();
