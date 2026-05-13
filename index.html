@@ -595,6 +595,10 @@
       const unit =
         document.getElementById("unit").value;
 
+      // ↓ 追加
+      const comment =
+        document.getElementById("comment").value;
+
       const file =
         document.getElementById("photoInput").files[0];
 
@@ -639,19 +643,23 @@
       const { data: insertData, error: insertError } =
         await supabase
           .from("vegetables")
-          .insert([
-            {
-              farmer_id: currentUser.id,  // ← RLSと一致必須
-              farm_name: farmName,
-              latitude: parseFloat(lat),
-              longitude: parseFloat(lng),
-              vegetable_name: vegName,
-              price: parseInt(price),
-              unit: unit,
-              image_url: urlData.publicUrl,
-              is_available: true
-            }
-          ]);
+ .insert([
+  {
+    farmer_id: currentUser.id,
+    farm_name: farmName,
+    latitude: parseFloat(lat),
+    longitude: parseFloat(lng),
+    vegetable_name: vegName,
+    price: parseInt(price),
+    unit: unit,
+
+    // ↓ 追加
+    comment: comment,
+
+    image_url: urlData.publicUrl,
+    is_available: true
+  }
+]);
 
       if (insertError) {
         console.error("登録失敗:", insertError);
