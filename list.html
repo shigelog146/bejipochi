@@ -130,7 +130,15 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        .upload-time {
+            font-size: 13px;
+            color: #666;
+            margin-top: 8px;
+            margin-bottom: 10px;
+        }
     </style>
+
 </head>
 
 <body>
@@ -216,7 +224,18 @@
                 div.className = "item";
 
                 div.innerHTML = `
-  ${item.image_url ? `<img src="${item.image_url}">` : ""}
+${item.image_url ? `<img src="${item.image_url}" id="img_${item.id}">` : ""}
+
+<label>写真を変更</label>
+
+<input
+  type="file"
+  accept="image/*"
+  capture="environment"
+  id="file_${item.id}"
+  class="edit-input"
+  onchange="updateImage('${item.id}')"
+/>
 
   <label>野菜名</label>
   <input
@@ -239,9 +258,21 @@
     id="comment_${item.id}"
   >${item.comment || ""}</textarea>
 
-  <div class="price">
-    ${item.unit || ""}
-  </div>
+<div class="price">
+  ${item.unit || ""}
+</div>
+
+<!-- 投稿日時 -->
+<div class="upload-time">
+  投稿日：
+  ${new Date(item.created_at).toLocaleString('ja-JP', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })}
+</div>
 
   <button
     class="save-btn"
@@ -330,9 +361,90 @@
 
             alert("保存しました");
         }
+
+        /* =====================================
+   画像更新
+===================================== */
+        async function updateImage(id) {
+
+            const fileInput =
+                document.getElementById(`file_${id}`);
+
+            const file = fileInput.files[0];
+
+            fileInput.disabled = true;
+            fileInput.style.opacity = "0.5";
+
+            if (!file) {
+                alert("画像を選択してください");
+                return;
+            }
+
+            // ログインユーザー取得
+            const { data: { user } } =
+                await supabase.auth.getUser();
+
+            if (!user) {
+                alert("ログインしてください");
+                return;
+            }
+
+            // ファイル名作成
+            const filePath =
+                `vegetables/${user.id}_${Date.now()}_${file.name}`;
+
+            // Storageへアップロード
+            const { error: uploadError } =
+                await supabase.storage
+                    .from("images")
+                    .upload(filePath, file);
+
+            if (uploadError) {
+                console.error(uploadError);
+                alert("画像アップロード失敗");
+                return;
+            }
+
+            // 公開URL取得
+            const { data: urlData } =
+                supabase.storage
+                    .from("images")
+                    .getPublicUrl(filePath);
+
+            const imageUrl = urlData.publicUrl;
+
+            // DB更新
+            const { error: updateError } =
+                await supabase
+                    .from("vegetables")
+                    .update({
+                        image_url: imageUrl
+                    })
+                    .eq("id", id);
+
+            if (updateError) {
+                console.error(updateError);
+                alert("DB更新失敗");
+                return;
+            }
+
+            // 画像即反映
+            const img =
+                document.getElementById(`img_${id}`);
+
+            if (img) {
+                img.src = imageUrl;
+            }
+
+            fileInput.disabled = false;
+            fileInput.style.opacity = "1";
+
+            alert("写真を更新しました");
+        }
         /* HTML側から呼べるようにする */
         window.stopSale = stopSale;
         window.updateItem = updateItem;
+        window.updateImage = updateImage;
 
         /* ページ読み込み時に一覧取得 */
         loadItems();
